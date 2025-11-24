@@ -1,25 +1,19 @@
 name: Deploy Service on Portainer
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Image tag to deploy'
+        required: true
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set Image Tag
-        run: echo "NEW_TAG=2" >> $GITHUB_ENV  # Hoặc dùng ${{ github.sha }}
-
-      - name: Update Service Image
+      - name: Trigger Portainer Webhook with new tag
         run: |
-          echo "Updating service image..."
-          curl -X POST "https://portainer.citypetro.com.vn/api/webhooks/2aebac80-8b36-4663-970d-411a1b199930" \
-          -H "Content-Type: application/json" \
-          -d "{\"image\":\"baohieu/petro:${NEW_TAG}\"}"
+          echo "Redeploying service with tag $TAG..."
+          curl -X POST "https://portainer.citypetro.com.vn/api/webhooks/2aebac80-8b36-4663-970d-411a1b199930?tag=$TAG"
         env:
-          NEW_TAG: 2
+          TAG: ${{ github.event.inputs.tag }}

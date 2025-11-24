@@ -1,0 +1,25 @@
+name: Deploy Service on Portainer
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set Image Tag
+        run: echo "NEW_TAG=latest" >> $GITHUB_ENV
+
+      - name: Update Service Image
+        run: |
+          echo "Updating service image..."
+          curl -X POST "https://portainer.citypetro.com.vn/api/webhooks/2aebac80-8b36-4663-970d-411a1b199930" \
+          -H "Content-Type: application/json" \
+          -d '{"image":"myrepo/myimage:${NEW_TAG}"}'
+        env:
+          NEW_TAG: ${{ github.sha }}

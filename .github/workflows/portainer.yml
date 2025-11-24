@@ -14,6 +14,6 @@ jobs:
       - name: Trigger Portainer Webhook with new tag
         run: |
           echo "Redeploying service with tag $TAG..."
-          curl -X POST "https://portainer.citypetro.com.vn/api/webhooks/2aebac80-8b36-4663-970d-411a1b199930?tag=$TAG"
+          curl -X POST "https://portainer.citypetro.com.vn/api/webhooks/419c9403-c510-4b0e-b3dc-91d663d2186c?tag=$TAG"
         env:
           TAG: ${{ github.event.inputs.tag }}

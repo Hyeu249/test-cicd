@@ -1,0 +1,65 @@
+name: Manual Build and Push Docker Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Image Version
+        type: string
+        required: true
+      frappe-repo:
+        description: Frappe repo
+        type: string
+      frappe-version:
+        description: Frappe branch
+        type: string
+      apps-json-base64:
+        description: base64 encoded string of apps.json
+        type: string
+      dockerhub_username:
+        description: Docker Hub(username)
+        type: string
+      dockerhub_token:
+        description: Docker Hub(token)
+        type: string
+      image_name:
+        description: Image Name
+        type: string
+        default: "baohieu/petro"
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ inputs.dockerhub_username || secrets.DOCKERHUB_USERNAME }}
+          password: ${{ inputs.dockerhub_token || secrets.DOCKERHUB_TOKEN }}
+
+      - name: Source Build Env
+        id: source-build-env
+        run: |
+          cat ./ci/build.env >> $GITHUB_ENV
+          echo "APPS_JSON_BASE64=$(base64 -w 0 ./ci/apps.json)" >> $GITHUB_ENV
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./images/layered/Containerfile
+          push: true
+          platforms: linux/amd64
+          tags: ${{ inputs.image_name }}:${{ inputs.version }}
+          build-args: |
+            "FRAPPE_PATH=${{ inputs.frappe-repo || env.FRAPPE_REPO }}"
+            "FRAPPE_BRANCH=${{ inputs.frappe-version || env.FRAPPE_VERSION }}"
+            "APPS_JSON_BASE64=${{ inputs.apps-json-base64 || env.APPS_JSON_BASE64 }}"

@@ -3,8 +3,11 @@ name: Deploy Service on Portainer
 on:
   workflow_dispatch:
     inputs:
+      webhook_url:
+        description: "Portainer Webhook URL"
+        required: true
       tag:
-        description: 'Image tag to deploy'
+        description: "Image tag to deploy"
         required: true
 
 jobs:
@@ -13,7 +16,8 @@ jobs:
     steps:
       - name: Trigger Portainer Webhook with new tag
         run: |
-          echo "Redeploying service with tag $TAG..."
-          curl -X POST "https://portainer.citypetro.com.vn/api/webhooks/419c9403-c510-4b0e-b3dc-91d663d2186c?tag=$TAG"
+          echo "Redeploying service with tag $URL?tag=$TAG..."
+          curl -X POST "$URL?tag=$TAG"
         env:
+          URL: ${{ github.event.inputs.webhook_url }}
           TAG: ${{ github.event.inputs.tag }}

@@ -3,8 +3,9 @@ ARG FRAPPE_BRANCH=version-15
 FROM frappe/build:${FRAPPE_BRANCH} AS builder
 
 ARG FRAPPE_BRANCH=version-15
-ARG FRAPPE_PATH=https://github.com/frappe/frappe
+ARG FRAPPE_PATH=git@github.com:Techno-THT-Gmbh/citypetro-frappe.git
 ARG APPS_JSON_BASE64
+ARG SSH_GIT_PRIVATE_KEY_BASE64
 
 USER root
 
@@ -12,9 +13,19 @@ RUN if [ -n "${APPS_JSON_BASE64}" ]; then \
     mkdir /opt/frappe && echo "${APPS_JSON_BASE64}" | base64 -d > /opt/frappe/apps.json; \
   fi
 
+RUN apt-get update && apt-get install -y openssh-client && rm -rf /var/lib/apt/lists/*
+
 USER frappe
 
-RUN export APP_INSTALL_ARGS="" && \
+RUN mkdir -p ~/.ssh && \
+    echo "${SSH_GIT_PRIVATE_KEY_BASE64}" | base64 -d > ~/.ssh/id_rsa_frappe && \
+    chmod 600 ~/.ssh/id_rsa_frappe && \
+    echo "StrictHostKeyChecking no" >> ~/.ssh/config && \
+    ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+RUN eval "$(ssh-agent -s)" && \
+  ssh-add ~/.ssh/id_rsa_frappe && \
+  export APP_INSTALL_ARGS="" && \
   if [ -n "${APPS_JSON_BASE64}" ]; then \
     export APP_INSTALL_ARGS="--apps_path=/opt/frappe/apps.json"; \
   fi && \

@@ -7,6 +7,10 @@ on:
         description: Image Version
         type: string
         required: true
+      bench-name:
+        description: Bench name
+        type: string
+        default: "erpnext-uat"
       frappe-repo:
         description: Frappe repo
         type: string
@@ -49,9 +53,31 @@ jobs:
         id: source-build-env
         run: |
           cat ./ci/build.env >> $GITHUB_ENV
-          echo "APPS_JSON_BASE64=$(base64 -w 0 ./ci/apps.json)" >> $GITHUB_ENV
+
+          if [ -f ./ci/apps.json ]; then
+            echo "Found ./ci/apps.json, encoding to base64..."
+            echo "APPS_JSON_BASE64=$(base64 -w 0 ./ci/apps.json)" >> $GITHUB_ENV
+          else
+            echo "Warning: ./ci/apps.json not found. APPS_JSON_BASE64 will be empty."
+            echo "APPS_JSON_BASE64=" >> $GITHUB_ENV
+          fi
+
+      - name: Check if image tag exists
+        id: check_tag
+        run: |
+          set -e
+          IMAGE="${{ inputs.image_name }}"
+          TAG="${{ inputs.version }}"
+          if curl --silent --fail -lSL "https://hub.docker.com/v2/repositories/${IMAGE}/tags/${TAG}/" > /dev/null; then
+            echo "Tag ${TAG} already exists."
+            echo "exists=true" >> $GITHUB_ENV
+          else
+            echo "Tag ${TAG} does not exist."
+            echo "exists=false" >> $GITHUB_ENV
+          fi
 
       - name: Build and push
+        if: env.exists == 'false'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -63,3 +89,19 @@ jobs:
             "FRAPPE_PATH=${{ inputs.frappe-repo || env.FRAPPE_REPO }}"
             "FRAPPE_BRANCH=${{ inputs.frappe-version || env.FRAPPE_VERSION }}"
             "APPS_JSON_BASE64=${{ inputs.apps-json-base64 || env.APPS_JSON_BASE64 }}"
+            "SSH_GIT_PRIVATE_KEY_BASE64=${{ secrets.SSH_GIT_PRIVATE_KEY_BASE64 }}"
+
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.VM_SSH_PRIVATE_KEY }}
+          known_hosts: unnecessary
+
+      - name: Update Docker services on VM
+        run: |
+          ssh -p 234 -o StrictHostKeyChecking=no ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} "
+            docker service update --image ${{ inputs.image_name }}:${{ inputs.version }} ${{ inputs.bench-name }}_backend &&
+            docker service update --image ${{ inputs.image_name }}:${{ inputs.version }} $${{ inputs.bench-name }}_frontend &&
+            docker service update --image ${{ inputs.image_name }}:${{ inputs.version }} ${{ inputs.bench-name }}_migration &&
+            echo 'All services updated successfully on VM'
+          "

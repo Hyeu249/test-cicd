@@ -26,10 +26,6 @@ on:
       dockerhub_token:
         description: Docker Hub(token)
         type: string
-      image_name:
-        description: Image Name
-        type: string
-        default: "baohieu/petro"
 
 jobs:
   build-and-push:
@@ -66,7 +62,7 @@ jobs:
         id: check_tag
         run: |
           set -e
-          IMAGE="${{ inputs.image_name }}"
+          IMAGE="${{ secrets.IMAGE_NAME }}"
           TAG="${{ inputs.version }}"
           if curl --silent --fail -lSL "https://hub.docker.com/v2/repositories/${IMAGE}/tags/${TAG}/" > /dev/null; then
             echo "Tag ${TAG} already exists."
@@ -84,7 +80,7 @@ jobs:
           file: ./images/layered/Containerfile
           push: true
           platforms: linux/amd64
-          tags: ${{ inputs.image_name }}:${{ inputs.version }}
+          tags: ${{ secrets.IMAGE_NAME }}:${{ inputs.version }}
           build-args: |
             "FRAPPE_PATH=${{ inputs.frappe-repo || env.FRAPPE_REPO }}"
             "FRAPPE_BRANCH=${{ inputs.frappe-version || env.FRAPPE_VERSION }}"
@@ -100,7 +96,7 @@ jobs:
       - name: Update Docker services on VM
         run: |
           ssh -p 234 -o StrictHostKeyChecking=no ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} "
-            IMAGE=${{ inputs.image_name }}:${{ inputs.version }}
+            IMAGE=${{ secrets.IMAGE_NAME }}:${{ inputs.version }}
             BENCH=${{ inputs.bench-name }}
             SERVICES=(backend frontend migration)
             UPDATED=()

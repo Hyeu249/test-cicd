@@ -100,8 +100,25 @@ jobs:
       - name: Update Docker services on VM
         run: |
           ssh -p 234 -o StrictHostKeyChecking=no ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} "
-            docker service update --image ${{ inputs.image_name }}:${{ inputs.version }} ${{ inputs.bench-name }}_backend &&
-            docker service update --image ${{ inputs.image_name }}:${{ inputs.version }} ${{ inputs.bench-name }}_frontend &&
-            docker service update --image ${{ inputs.image_name }}:${{ inputs.version }} ${{ inputs.bench-name }}_migration &&
-            echo 'All services updated successfully on VM'
+            IMAGE=${{ inputs.image_name }}:${{ inputs.version }}
+            BENCH=${{ inputs.bench-name }}
+            SERVICES=(backend frontend migration)
+            UPDATED=()
+
+            for S in \${SERVICES[@]}; do
+              echo \"Updating service \${S}...\"
+              if docker service update --image \$IMAGE \${BENCH}_\$S; then
+                UPDATED+=\$S
+                echo \"Service \${S} updated successfully\"
+              else
+                echo \"Service \${S} failed to update. Rolling back updated services...\"
+                for R in \${UPDATED[@]}; do
+                  echo \"Rolling back \${R}\"
+                  docker service rollback \${BENCH}_\$R
+                done
+                exit 1
+              fi
+            done
+
+            echo \"All services updated successfully\"
           "

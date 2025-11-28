@@ -101,7 +101,7 @@ jobs:
         run: |
           ssh -p 234 -o StrictHostKeyChecking=no ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} "
             docker service update --image ${{ inputs.image_name }}:${{ inputs.version }} ${{ inputs.bench-name }}_backend &&
-            docker service update --image ${{ inputs.image_name }}:${{ inputs.version }} $${{ inputs.bench-name }}_frontend &&
+            docker service update --image ${{ inputs.image_name }}:${{ inputs.version }} ${{ inputs.bench-name }}_frontend &&
             docker service update --image ${{ inputs.image_name }}:${{ inputs.version }} ${{ inputs.bench-name }}_migration &&
             echo 'All services updated successfully on VM'
           "

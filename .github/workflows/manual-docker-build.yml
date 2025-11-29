@@ -102,9 +102,9 @@ jobs:
             UPDATED=()
 
             for S in \${SERVICES[@]}; do
+              UPDATED+=("$S")
               echo \"Updating service \${S}...\"
               if docker service update --image \$IMAGE \${BENCH}_\$S; then
-                UPDATED+=\$S
                 echo \"Service \${S} updated successfully\"
               else
                 echo \"Service \${S} failed to update. Rolling back updated services...\"

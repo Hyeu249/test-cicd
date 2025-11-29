@@ -101,16 +101,18 @@ jobs:
             SERVICES=(backend frontend migration)
             UPDATED=()
 
+            echo \"Pulling image in advance...\"
+            docker pull \$IMAGE || { echo \"Failed to pull image\"; exit 1; }
+
             for S in \${SERVICES[@]}; do
-              UPDATED+=("$S")
+              UPDATED+=(\"\$S\")
               echo \"Updating service \${S}...\"
               if docker service update --image \$IMAGE \${BENCH}_\$S; then
                 echo \"Service \${S} updated successfully\"
               else
-                echo \"Service \${S} failed to update. Rolling back updated services...\"
+                echo \"Service \${S} failed. Rolling back...\"
                 for R in \${UPDATED[@]}; do
-                  echo \"Rolling back \${R}\"
-                  docker service rollback \${BENCH}_\$R
+                  docker service rollback \${BENCH}_\$R || true
                 done
                 exit 1
               fi

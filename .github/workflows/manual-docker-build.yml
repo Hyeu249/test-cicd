@@ -14,9 +14,11 @@ on:
       frappe-repo:
         description: Frappe repo
         type: string
+        default: "git@github.com:Techno-THT-Gmbh/citypetro-frappe.git"
       frappe-version:
         description: Frappe branch
         type: string
+        default: "version-15"
       apps-json-base64:
         description: base64 encoded string of apps.json
         type: string
@@ -82,8 +84,8 @@ jobs:
           platforms: linux/amd64
           tags: ${{ secrets.IMAGE_NAME }}:${{ inputs.version }}
           build-args: |
-            "FRAPPE_PATH=${{ inputs.frappe-repo || env.FRAPPE_REPO }}"
-            "FRAPPE_BRANCH=${{ inputs.frappe-version || env.FRAPPE_VERSION }}"
+            "FRAPPE_PATH=${{ inputs.frappe-repo }}"
+            "FRAPPE_BRANCH=${{ inputs.frappe-version }}"
             "APPS_JSON_BASE64=${{ inputs.apps-json-base64 || env.APPS_JSON_BASE64 }}"
             "SSH_GIT_PRIVATE_KEY_BASE64=${{ secrets.SSH_GIT_PRIVATE_KEY_BASE64 }}"
 

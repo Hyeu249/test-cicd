@@ -97,28 +97,33 @@ jobs:
 
       - name: Update Docker services on VM
         run: |
-          ssh -p 234 -o StrictHostKeyChecking=no ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} "
-            IMAGE=${{ secrets.IMAGE_NAME }}:${{ inputs.version }}
-            BENCH=${{ inputs.bench-name }}
-            SERVICES=(backend frontend migration)
-            UPDATED=()
+          ssh \
+            -p 234 \
+            -o StrictHostKeyChecking=no \
+            -o ServerAliveInterval=30 \
+            -o ServerAliveCountMax=10 \
+            ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} "
+              IMAGE=${{ secrets.IMAGE_NAME }}:${{ inputs.version }}
+              BENCH=${{ inputs.bench-name }}
+              SERVICES=(backend frontend migration)
+              UPDATED=()
 
-            echo \"Pulling image in advance...\"
-            docker pull \$IMAGE || { echo \"Failed to pull image\"; exit 1; }
+              echo '[INFO] starting service updates...'
 
-            for S in \${SERVICES[@]}; do
-              UPDATED+=(\"\$S\")
-              echo \"Updating service \${S}...\"
-              if docker service update --image \$IMAGE \${BENCH}_\$S; then
-                echo \"Service \${S} updated successfully\"
-              else
-                echo \"Service \${S} failed. Rolling back...\"
-                for R in \${UPDATED[@]}; do
-                  docker service rollback \${BENCH}_\$R || true
-                done
-                exit 1
-              fi
-            done
+              for S in \${SERVICES[@]}; do
+                UPDATED+=(\"\$S\")
+                echo \"[INFO] Updating service \$S...\"
 
-            echo \"All services updated successfully\"
-          "
+                if docker service update --image \$IMAGE \${BENCH}_\$S; then
+                  echo \"[OK] Service \$S updated successfully\"
+                else
+                  echo \"[ERROR] Service \$S failed. Rolling back...\"
+                  for R in \${UPDATED[@]}; do
+                    docker service rollback \${BENCH}_\$R || true
+                  done
+                  exit 1
+                fi
+              done
+
+              echo '[SUCCESS] All services updated successfully'
+            "
